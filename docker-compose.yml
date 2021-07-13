@@ -1,0 +1,7 @@
+version: '3.9'
+services:
+  dip_bot:
+    environment:
+      - PYTHONUNBUFFERED=1
+    container_name: dip_bot_trader
+    build: .
