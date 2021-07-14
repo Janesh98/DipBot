@@ -1,0 +1,1 @@
+29 13 * * 1-5 sudo docker ps | grep -q dip_bot_trader || sudo docker start dip_bot_trader
