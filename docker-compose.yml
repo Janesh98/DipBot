@@ -5,3 +5,6 @@ services:
       - PYTHONUNBUFFERED=1
     container_name: dip_bot_trader
     build: .
+    deploy:
+      restart_policy:
+        condition: on-failure
