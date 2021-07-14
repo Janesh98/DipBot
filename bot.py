@@ -6,7 +6,7 @@ import threading
 import time
 import os
 from dotenv import load_dotenv
-from alpaca import submit_order, get_all_orders, cancel_order
+from alpaca import submit_order, get_all_orders, cancel_order, modify_order, get_order_id
 
 load_dotenv()
 
@@ -33,7 +33,7 @@ def heartbeat(interval, ws):
             "d": "null"
         }
         send_json_request(ws, heartbeatJSON)
-        print("Heartbeat sent")
+        # print("Heartbeat sent")
 
 
 def save_event(data):
@@ -46,27 +46,38 @@ def save_event(data):
         json.dump(file_data, file, indent=4)
 
 
+def parse(action, order):
+    ticker = action.split(" ")[-1].upper()
+    buy_target = float(order[3].split(" ")[-1][1:])
+    take_profit = float(order[2].split(" ")[-1][1:])
+    stop_loss = float(order[4].split(" ")[-1][1:])
+    return ticker, buy_target, take_profit, stop_loss
+
+
 def analyse(event):
     try:
         order = event['d']['content'].split('\n')
         action = order[0].lower()
         if "new trade alert for" in action:
-            ticker = action.split(" ")[-1].upper()
-            buy_target = float(order[3].split(" ")[-1][1:])
-            take_profit = float(order[2].split(" ")[-1][1:])
-            stop_loss = float(order[4].split(" ")[-1][1:])
-            submit_order(ticker, "buy", 1000.0, buy_target, take_profit, stop_loss)
+            ticker, buy_target, take_profit, stop_loss = parse(action, order)
+            submit_order(ticker, "buy", 1000.0, buy_target,
+                         take_profit, stop_loss)
+        elif "adjusted trade alert for" in action:
+            ticker, buy_target, take_profit, stop_loss = parse(action, order)
+            print(
+                f"Adjusted Trade:\nTicker: {ticker}\nBuy Target: {buy_target}\nTake Profit: {take_profit}\nStop Loss: {stop_loss}\n")
+            order_id = get_order_id(ticker)
+            print(order_id)
+            if order_id:
+                modify_order(order_id, ticker, "buy", 1000.0, buy_target,
+                             take_profit, stop_loss)
         elif "cancelled trade for" in action:
             ticker = action.split(" ")[-1].upper()
-            orders_list = get_all_orders()
-            for o in orders_list:
-                symbol = o["symbol"]
-                if ticker == symbol:
-                    print(f"Cancelling order for {ticker}")
-                    order_id = o["id"]
-                    cancel_order(order_id)
-            print()
-    except Exception:
+            order_id = get_order_id(ticker)
+            if order_id:
+                print(f"Cancelling order for {ticker}\n")
+                cancel_order(order_id)
+    except Exception as e:
         pass
 
 
@@ -116,7 +127,7 @@ def main():
     ws.close()
     print("Exiting...")
 
-# Wait for market to open.
+
 def awaitMarketOpen():
     isOpen = datetime.datetime.utcnow().time() >= datetime.time(13, 30, 0)
     if(not isOpen):

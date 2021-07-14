@@ -53,7 +53,7 @@ def connect_to_endpoint(url, headers, data):
 
 
 def submit_order(ticker, side, notional, buy_target, take_profit, stop_loss):
-    print("Buying ~${} of {} at {}, with take profit {} and stop loss {}".format(
+    print("Buying ~${} of {} at {}, with take profit {} and stop loss {}\n".format(
         notional, ticker, buy_target, take_profit, stop_loss))
     url = create_url()
     headers = create_headers()
@@ -86,4 +86,19 @@ def cancel_order(order_id):
                 response.status_code, response.text
             )
         )
-    return response.json()
+
+
+def modify_order(order_id, ticker, side, notional, buy_target, take_profit, stop_loss):
+    cancel_order(order_id)
+    submit_order(ticker, side, notional, buy_target,
+                 take_profit, stop_loss)
+
+
+def get_order_id(ticker):
+    orders_list = get_all_orders()
+    for o in orders_list:
+        symbol = o["symbol"]
+        if ticker == symbol:
+            order_id = o["id"]
+            return order_id
+    return None
